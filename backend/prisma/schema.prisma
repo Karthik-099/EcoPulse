@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String
+  walletAddress String?  @unique
+  ecoScore      Int      @default(0)
+  coinBalance   Float    @default(0)
+  avatar        String?
+  bio           String?
+  isVerified    Boolean  @default(false)
+  role          Role     @default(USER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tasks         Task[]
+  events        Event[]
+  transactions  Transaction[]
+  eventParticipants EventParticipant[]
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  userId      String
+  type        TaskType
+  title       String
+  description String?
+  proofUrl    String
+  location    String?
+  latitude    Float?
+  longitude   Float?
+  status      TaskStatus @default(PENDING)
+  coinsEarned Float      @default(0)
+  aiScore     Float?
+  verifiedAt  DateTime?
+  rejectedReason String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  creatorId   String
+  title       String
+  description String
+  eventType   EventType
+  date        DateTime
+  location    String
+  latitude    Float
+  longitude   Float
+  maxParticipants Int
+  budget      Float?
+  rewards     Float
+  imageUrl    String?
+  status      EventStatus @default(UPCOMING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator      User @relation(fields: [creatorId], references: [id])
+  participants EventParticipant[]
+
+  @@index([creatorId])
+  @@index([date])
+}
+
+model EventParticipant {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  status    ParticipantStatus @default(REGISTERED)
+  joinedAt  DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  userId      String
+  type        TransactionType
+  amount      Float
+  fromWallet  String?
+  toWallet    String?
+  txHash      String?         @unique
+  status      TxStatus        @default(PENDING)
+  description String?
+  createdAt   DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([txHash])
+}
+
+model CarbonCredit {
+  id          String   @id @default(uuid())
+  companyName String
+  companyEmail String
+  amount      Float
+  price       Float
+  status      CreditStatus @default(PENDING)
+  txHash      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyEmail])
+}
+
+enum Role {
+  USER
+  ADMIN
+  CORPORATE
+}
+
+enum TaskType {
+  PLANT_TREE
+  WATER_PLANTS
+  PUBLIC_TRANSPORT
+  BEACH_CLEANUP
+  RECYCLE
+  REDUCE_PLASTIC
+  BIKE_RIDE
+  CARPOOL
+  OTHER
+}
+
+enum TaskStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EventType {
+  TREE_PLANTING
+  BEACH_CLEANUP
+  RIVER_CLEANUP
+  AWARENESS_CAMPAIGN
+  WORKSHOP
+  OTHER
+}
+
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum ParticipantStatus {
+  REGISTERED
+  ATTENDED
+  CANCELLED
+}
+
+enum TransactionType {
+  REWARD
+  PAYMENT
+  TRANSFER
+  WITHDRAWAL
+}
+
+enum TxStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum CreditStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
